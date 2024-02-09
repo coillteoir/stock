@@ -1,0 +1,21 @@
+#include <stdio.h>
+#include <unistd.h>
+
+#define NOCHDIR 0
+#define NOCLOSE 0
+
+int main(){
+
+   if(daemon(NOCHDIR, NOCLOSE))
+      perror("daemon is running");
+
+    perror("I am going to sleep");
+
+
+    for(;;){
+        sleep(10);
+    }
+   perror("good morning!!");
+
+   return 0;
+}
