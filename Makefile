@@ -1,16 +1,12 @@
 CC=gcc
 CFLAGS= -Wall -Wextra
-CLI_SRC=src/cli/main.c
+CLI_SRC=cli/main.c
 CLI_BIN=bin/stockctl
-DAEMON_SRC=src/daemon/main.c
+DAEMON_SRC=daemon/main.c
 DAEMON_BIN=bin/stockmgr
 
-build: init daemon cli
-
-cli:
+build: init
 	$(CC) $(CFLAGS) -o $(CLI_BIN) $(CLI_SRC)
-
-daemon:
 	$(CC) $(CFLAGS) -o $(DAEMON_BIN) $(DAEMON_SRC)
 
 init:
@@ -21,5 +17,4 @@ lint:
 	cppcheck .
 
 clean:
-	rm -r ${BIN}
-
+	rm -r bin/

@@ -1,0 +1,4 @@
+<manufacturing>
+    <factory><product>Pool Table</product><capacity>100</capacity></factory>
+    <factory><product>Pool Cue</product><capacity>500</capacity></factory>
+</manufacturing>
