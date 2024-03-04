@@ -8,57 +8,49 @@
 
 // Function to transform main process into a daemon
 static void become_daemon() {
-  pid_t child_pid;
+    pid_t child_pid;
 
-  child_pid = fork();
+    child_pid = fork();
 
-  if (child_pid < 0) {
-    exit(EXIT_FAILURE);
-  }
+    if (child_pid < 0) {
+        exit(EXIT_FAILURE);
+    }
 
-  if (child_pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
+    if (child_pid > 0) {
+        exit(EXIT_SUCCESS);
+    }
 
-  if (setsid() < 0) {
-    exit(EXIT_FAILURE);
-  }
+    if (setsid() < 0) {
+        exit(EXIT_FAILURE);
+    }
 
-  signal(SIGCHLD, SIG_IGN);
-  signal(SIGHUP, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
 
-  child_pid = fork();
+    child_pid = fork();
 
-  if (child_pid < 0) {
-    exit(EXIT_FAILURE);
-  }
+    if (child_pid < 0) {
+        exit(EXIT_FAILURE);
+    }
 
-  if (child_pid > 0) {
-    exit(EXIT_SUCCESS);
-  }
+    if (child_pid > 0) {
+        exit(EXIT_SUCCESS);
+    }
 
-  chdir("/");
+    chdir("/");
 
-  umask(0);
+    umask(0);
 
-  for (int fd = sysconf(_SC_OPEN_MAX); fd >= 0; fd--) {
-    close(fd);
-  }
-
-  openlog("mydaemon", LOG_PID, LOG_DAEMON);
+    for (int fd = sysconf(_SC_OPEN_MAX); fd >= 0; fd--) {
+        close(fd);
+    }
 }
 
 int main() {
-  become_daemon();
+    become_daemon();
+    FILE* output = fopen("/home/david/college/systems-software/log.log","w+");
+    fputs("HELLO FROM DAEMON", output);
+    fclose(output);
 
-  while (1) {
-    syslog(LOG_NOTICE, "mydaemon started");
-    sleep(20);
-    break;
-  }
-
-  syslog(LOG_NOTICE, "mydaemon terminated");
-  closelog();
-
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

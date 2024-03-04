@@ -1,8 +1,8 @@
 CC=gcc
-CFLAGS= -Wall -Wextra -Werror
-CLI_SRC=src/cli/*.c
+CFLAGS= -Wall -Wextra
+CLI_SRC=src/cli/main.c
 CLI_BIN=bin/stockctl
-DAEMON_SRC=src/daemon/*.c
+DAEMON_SRC=src/daemon/main.c
 DAEMON_BIN=bin/stockmgr
 
 build: init daemon cli
@@ -16,15 +16,10 @@ daemon:
 init:
 	if [ -d "bin/" ]; then true; else mkdir bin/; fi
 
-
-run:
-	./$(BIN) $(TEST) $(OUT)
-
-
-
 lint:
+	astyle -r *.c
 	cppcheck .
 
 clean:
-	rm ${BIN}
+	rm -r ${BIN}
 
