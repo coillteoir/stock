@@ -1,16 +1,25 @@
 CC=gcc
 CFLAGS= -Wall -Wextra -Werror
-BIN=bin/manager
-SRC=src/main.c
+CLI_SRC=src/cli/*.c
+CLI_BIN=bin/stockctl
+DAEMON_SRC=src/daemon/*.c
+DAEMON_BIN=bin/stockmgr
 
-build:
+build: init daemon cli
+
+cli:
+	$(CC) $(CFLAGS) -o $(CLI_BIN) $(CLI_SRC)
+
+daemon:
+	$(CC) $(CFLAGS) -o $(DAEMON_BIN) $(DAEMON_SRC)
+
+init:
 	if [ -d "bin/" ]; then true; else mkdir bin/; fi
-	$(CC) $(CFLAGS) -o $(BIN) $(SRC) 
+
 
 run:
 	./$(BIN) $(TEST) $(OUT)
 
-both: build run
 
 
 lint:
@@ -18,3 +27,4 @@ lint:
 
 clean:
 	rm ${BIN}
+
