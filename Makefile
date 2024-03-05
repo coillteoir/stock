@@ -16,5 +16,9 @@ lint:
 	astyle -r *.c
 	cppcheck .
 
+killDaemons:
+	kill $(pgrep stockmgr)
+
 clean:
 	rm -r bin/
+	rm log.log
