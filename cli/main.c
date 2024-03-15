@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -14,74 +15,62 @@ typedef struct {
     void (*function)(char**);
 } Command;
 
-void help(char **args) {
+void write_fifo(char *message) {
+    int fifo_fd = open(FIFO_NAME, O_WRONLY);
+
+    if(fifo_fd == -1) {
+        switch (errno) {
+        case EACCES:
+            printf("Could not open %s permission denied\n", FIFO_NAME);
+            break;
+        default:
+            puts("Could not write to pipe");
+        }
+        exit(1);
+    }
+
+    printf("Writing %s to pipe\n", message);
+
+    if(write(fifo_fd, message, strlen(message)) == -1) {
+        switch (errno) {
+        case EBADF:
+            puts("Bad file descriptor");
+            break;
+        default:
+            puts("Could not write to pipe");
+        }
+        exit(1);
+    }
+    close(fifo_fd);
+}
+
+void help() {
     puts("Welcome to stockctl");
 }
 
-void startDaemon(char **args) {
-    puts("I will now start the daemon (wink)");
+bool find_process() {
+    return false;
 }
 
-void backup(char **args) {
-    int fifo_fd = open(FIFO_NAME, O_WRONLY);
+void startDaemon() {
 
-    if(fifo_fd == -1) {
-        switch (errno) {
-        case EACCES:
-            printf("Could not open %s permission denied\n", FIFO_NAME);
-            break;
-        default:
-            puts("Could not write to pipe");
-        }
-        exit(1);
+    pid_t pid = fork();
+
+    if(pid == 0) {
+        system("./bin/stockmgr");
+    } else if(pid > 0) {
+        printf("Fork created to start stockmgr\n");
+    } else {
+        puts("Error, fork failed");
     }
-
-    char message[] = "backup";
-
-    printf("Writing %s to pipe\n", message);
-
-    if(write(fifo_fd, message, sizeof(message)) == -1) {
-        switch (errno) {
-        case EBADF:
-            puts("Bad file descriptor");
-            break;
-        default:
-            puts("Could not write to pipe");
-        }
-        exit(1);
-    }
-
 }
 
-void stop(char **args) {
-    int fifo_fd = open(FIFO_NAME, O_WRONLY);
+void backup() {
+    write_fifo("backup");
+}
 
-    if(fifo_fd == -1) {
-        switch (errno) {
-        case EACCES:
-            printf("Could not open %s permission denied\n", FIFO_NAME);
-            break;
-        default:
-            puts("Could not write to pipe");
-        }
-        exit(1);
-    }
-
-    char message[] = "stop";
-
-    printf("Writing %s to pipe\n", message);
-
-    if(write(fifo_fd, message, sizeof(message)) == -1) {
-        switch (errno) {
-        case EBADF:
-            puts("Bad file descriptor");
-            break;
-        default:
-            puts("Could not write to pipe");
-        }
-        exit(1);
-    }
-
+void stop() {
+    write_fifo("stop");
 }
 
 int main(int argc, char **argv) {

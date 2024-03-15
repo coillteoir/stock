@@ -5,7 +5,7 @@ CLI_BIN=bin/stockctl
 DAEMON_SRC=daemon/main.c
 DAEMON_BIN=bin/stockmgr
 
-build: init
+build: init lint
 	$(CC) $(CFLAGS) -o $(CLI_BIN) $(CLI_SRC)
 	$(CC) $(CFLAGS) -o $(DAEMON_BIN) $(DAEMON_SRC)
 
@@ -16,9 +16,7 @@ lint:
 	astyle -r *.c
 	cppcheck .
 
-killDaemons:
-	kill $(pgrep stockmgr)
-
 clean:
-	rm -r bin/
-	rm log.log
+	rm -fr bin/
+	rm -f log.log
+	rm -f stock_pipe

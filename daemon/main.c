@@ -16,9 +16,76 @@
 
 extern int errno;
 
-void backup() {
-    //lock upload and dashboard dirs
+FILE* logfile;
+
+struct dirent** load_files(DIR * dir) {
+    size_t file_count = 0;
+    for(struct dirent* entry=readdir(dir); entry != NULL; entry = readdir(dir)) {
+
+        switch(entry->d_type) {
+        case DT_REG:
+
+            log_info(logfile, entry->d_name);
+
+            file_count++;
+
+            break;
+        default:
+            continue;
+        }
+    }
+
+    struct dirent **files = calloc(file_count, sizeof(struct dirent *));
+    if(files == NULL) {
+        log_error(logfile, "cannot allocate memory for files");
+        return NULL;
+    }
+
+    for(struct dirent* entry = readdir(dir); entry != NULL; entry = readdir(dir)) {
+        static int i = 0;
+        switch(entry->d_type) {
+        case DT_REG:
+            log_info(logfile, entry->d_name);
+
+            files[i] = entry;
+            i++;
+
+            break;
+        }
+    }
+    return files;
+}
+
+//lock upload and dashboard dirs
+void backup(const char *source, const char *dest) {
+
     //copy files over to dashboard directory
+    DIR* sourceDir = opendir(source);
+    if(sourceDir == NULL) {
+        char logbuf[100];
+        sprintf(logbuf, "could not open file %s", source);
+        log_error(logfile, logbuf);
+        switch (errno) {
+        case ENOENT:
+            log_error(logfile, "file not found");
+        }
+    }
+
+    DIR* destDir = opendir(dest);
+    if(destDir == NULL) {
+        char logbuf[100];
+        sprintf(logbuf, "could not open file %s", dest);
+        log_error(logfile, logbuf);
+        switch (errno) {
+        case ENOENT:
+            log_error(logfile, "file not found");
+        }
+    }
+
+    struct dirent **sourceFiles = load_files(sourceDir);
+
+    closedir(destDir);
+    closedir(sourceDir);
 
     //copy files to backup directory
     //create log of what has happened.
@@ -27,34 +94,65 @@ void backup() {
 int main() {
     become_daemon();
 
-    FILE* logfile = (access(LOG_PATH, F_OK))?
-                    fopen(LOG_PATH,"w+"):
-                    fopen(LOG_PATH, "a");
+    logfile = (access(LOG_PATH, F_OK))?
+              fopen(LOG_PATH,"w+"):
+              fopen(LOG_PATH, "a");
 
-    //makes the file stream unbuffered
     setvbuf(logfile, NULL, _IONBF, 0);
+
+    log_info(logfile, "logger iniialized");
 
     if(mkfifo(FIFO_NAME, 0666) == -1) {
         switch(errno) {
         case EACCES:
-            log_error(logfile, "Permission denied");
+            log_error(logfile, "could not create named pipe, permission denied");
             break;
         default:
-            log_error(logfile,"Error could not make file stream pipe");
+            log_error(logfile,"could not make file stream pipe");
         }
+        fprintf(logfile, "ERRNO: %d\n", errno);
         exit(1);
     }
-    int fifo_fd = open(FIFO_NAME, O_RDONLY);
+
+    log_info(logfile, "stock_pipe created for IPC");
+
+    // Opening in Read/Write mode prevents the daemon from hanging while waiting
+    // for the cli to open the pipe in write mode.
+    int fifo_fd = open(FIFO_NAME, O_RDWR);
+    if(fifo_fd == -1) {
+        switch(errno) {
+        case EBADF:
+            log_error(logfile,"invalid path name");
+            break;
+        case EACCES:
+            log_error(logfile, "could not open pipe, permission denied");
+            break;
+        default:
+            log_error(logfile, "could not open pipe for reading");
+        }
+    }
+    fcntl(fifo_fd, F_SETFL, O_NONBLOCK);
+    log_info(logfile, "pipe opened for reading");
 
     char pipe_buffer[100];
     time_t last_health_log = 0;
-    time_t current = time(NULL);
 
     for(;;) {
-        size_t bytes_read = read(fifo_fd, pipe_buffer, sizeof(pipe_buffer));
+        int bytes_read = read(fifo_fd, pipe_buffer, sizeof(pipe_buffer));
 
         if(bytes_read == -1) {
-            log_error(logfile, "Cannot read pipe");
+            switch (errno) {
+            case EBADF:
+                log_error(logfile, "invalid file descriptor, not open for reading.");
+                break;
+            case EAGAIN:
+                // This is mainly caused by the pipe having no data.
+                break;
+            default:
+                log_error(logfile, "cannot read pipe");
+            }
+        } else {
+            log_info(logfile, pipe_buffer);
         }
 
         if(!strcmp(pipe_buffer, "stop")) {
@@ -62,12 +160,12 @@ int main() {
             break;
         }
         if(!strcmp(pipe_buffer, "backup")) {
-            log_info(logfile, "Backing up files");
+            backup(DASH_DIR, BACKUP_DIR);
         }
 
-        current = time(NULL);
+        time_t current = time(NULL);
         if(current - last_health_log >= 20) {
-            log_info(logfile, pipe_buffer);
+
             log_info(logfile, "Manager healthy");
 
             last_health_log = current;
